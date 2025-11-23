@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "576076911598",
+    "project_id": "avitobooks-8b7ba",
+    "storage_bucket": "avitobooks-8b7ba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576076911598:android:56f40b2717dd60dce1b4ff",
+        "android_client_info": {
+          "package_name": "com.example.avitobooks"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnRaZrwY2LLHzaSM1YkCl59XMRiANh-hc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
