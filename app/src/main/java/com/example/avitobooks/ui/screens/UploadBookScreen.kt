@@ -27,6 +27,7 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import android.util.Log
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,65 +132,72 @@ fun UploadBookScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxSize()
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Файл будет сохранён в облако. " + "Локальную копию можно скачать во вкладке «Мои книги».",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = { filePickerLauncher.launch("*/*") },
-                modifier = Modifier.fillMaxWidth()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = fileName ?: "Выбрать файл")
-            }
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Файл сохранится в вашем облачном аккаунте. " + "Локальную копию можно скачать во вкладке «Мои книги».",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = fileName ?: "Выбрать файл")
+                    }
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Название книги") },
-                singleLine = true
-            )
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Название книги") },
+                        singleLine = true
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = author,
+                        onValueChange = { author = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Автор") },
+                        singleLine = true
+                    )
 
-            OutlinedTextField(
-                value = author,
-                onValueChange = { author = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Автор") },
-                singleLine = true
-            )
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage!!,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (successMessage != null) {
-                Text(
-                    text = successMessage!!,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                    if (successMessage != null) {
+                        Text(
+                            text = successMessage!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -205,7 +213,7 @@ fun UploadBookScreen(
                 if (isUploading) {
                     CircularProgressIndicator(
                         modifier = Modifier
-                            .size(20.dp)
+                            .height(20.dp)
                             .padding(end = 8.dp),
                         strokeWidth = 2.dp
                     )

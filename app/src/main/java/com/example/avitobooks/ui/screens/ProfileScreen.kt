@@ -3,10 +3,15 @@ package com.example.avitobooks.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material3.*
@@ -20,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -45,6 +51,8 @@ fun ProfileScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val user = auth.currentUser
+
+    val scrollState = rememberScrollState()
 
     var displayName by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
@@ -213,19 +221,42 @@ fun ProfileScreen(
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .fillMaxSize(),
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.background
+                            )
+                        )
+                    )
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Блок аватарки
                 Box(
                     modifier = Modifier
                         .size(96.dp)
                         .clip(CircleShape)
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            shape = CircleShape
+                        )
                         .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .clickable(enabled = !isUploadingAvatar && user != null) {
-                            imagePickerLauncher.launch("image/*")
+                        .align(Alignment.CenterHorizontally)
+                        .let {
+                            if (!isUploadingAvatar && user != null) {
+                                it.then(
+                                    Modifier
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                        .clickable { imagePickerLauncher.launch("image/*") }
+                                )
+                            } else it
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -267,76 +298,119 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = displayName,
-                    onValueChange = { displayName = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Никнейм") },
-                    singleLine = true,
-                    enabled = !isSavingProfile && !isUploadingAvatar
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = status,
-                    onValueChange = { status = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Статус") },
-                    maxLines = 3,
-                    enabled = !isSavingProfile && !isUploadingAvatar
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                if (successMessage != null) {
-                    Text(
-                        text = successMessage!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = { saveProfile() },
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = user != null && !isSavingProfile && !isUploadingAvatar
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    if (isSavingProfile) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier
-                                .height(20.dp)
-                                .padding(end = 8.dp)
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Настройки профиля",
+                            style = MaterialTheme.typography.titleMedium
                         )
+
+                        OutlinedTextField(
+                            value = displayName,
+                            onValueChange = { displayName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Никнейм") },
+                            singleLine = true,
+                            enabled = !isSavingProfile && !isUploadingAvatar
+                        )
+
+                        OutlinedTextField(
+                            value = status,
+                            onValueChange = { status = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Статус") },
+                            maxLines = 3,
+                            enabled = !isSavingProfile && !isUploadingAvatar
+                        )
+
+                        AnimatedVisibility(visible = errorMessage != null) {
+                            Text(
+                                text = errorMessage.orEmpty(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        AnimatedVisibility(visible = successMessage != null) {
+                            Text(
+                                text = successMessage.orEmpty(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Button(
+                            onClick = { saveProfile() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = user != null && !isSavingProfile && !isUploadingAvatar
+                        ) {
+                            if (isSavingProfile) {
+                                CircularProgressIndicator(
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier
+                                        .height(20.dp)
+                                        .padding(end = 8.dp)
+                                )
+                            }
+                            Text("Сохранить профиль")
+                        }
                     }
-                    Text("Сохранить профиль")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        auth.signOut()
-                        onLogout()
-                    },
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = user != null && !isSavingProfile && !isUploadingAvatar
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Text("Выйти из аккаунта")
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Аккаунт",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "«Читатель проживает тысячу жизней, прежде чем умрет. Человек, который никогда не читает, переживает только одну» — Д. Мартин.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                auth.signOut()
+                                onLogout()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = user != null && !isSavingProfile && !isUploadingAvatar
+                        ) {
+                            Text("Выйти из аккаунта")
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
