@@ -27,6 +27,8 @@ import com.example.avitobooks.ui.screens.ProfileScreen
 import com.example.avitobooks.ui.screens.UploadBookScreen
 import com.example.avitobooks.ui.theme.AvitoBooksTheme
 import androidx.navigation.compose.composable
+import com.google.firebase.auth.FirebaseAuth
+import com.example.avitobooks.ui.screens.BookReaderScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,10 +45,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun RootNavigation() {
     val navController = rememberNavController()
+    val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
 
     NavHost(
         navController = navController,
-        startDestination = "auth"
+        startDestination = if (isLoggedIn) "main" else "auth"
     ) {
         composable("auth") {
             AuthScreen(
@@ -57,14 +60,53 @@ fun RootNavigation() {
                 }
             )
         }
+
         composable("main") {
-            AvitoBooksApp()
+            AvitoBooksApp(
+                onLogout = {
+                    navController.navigate("auth") {
+                        popUpTo("main") { inclusive = true }
+                    }
+                },
+                onOpenBook = { title, localPath ->
+                    val encodedTitle = android.net.Uri.encode(title)
+                    val encodedPath = android.net.Uri.encode(localPath)
+
+                    navController.navigate(
+                        "reader?title=$encodedTitle&path=$encodedPath"
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = "reader?title={title}&path={path}",
+            arguments = listOf(
+                androidx.navigation.navArgument("title") {
+                    type = androidx.navigation.NavType.StringType
+                },
+                androidx.navigation.navArgument("path") {
+                    type = androidx.navigation.NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val bookTitle = backStackEntry.arguments?.getString("title") ?: "Книга"
+            val localPath = backStackEntry.arguments?.getString("path").orEmpty()
+
+            BookReaderScreen(
+                title = bookTitle,
+                localFilePath = localPath,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
 
 @Composable
-fun AvitoBooksApp() {
+fun AvitoBooksApp(
+    onLogout: () -> Unit,
+    onOpenBook: (title: String, localPath: String) -> Unit
+) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.LIBRARY) }
 
     NavigationSuiteScaffold(
@@ -85,9 +127,11 @@ fun AvitoBooksApp() {
         }
     ) {
         when (currentDestination) {
-            AppDestinations.LIBRARY -> LibraryScreen()
+            AppDestinations.LIBRARY -> LibraryScreen(
+                onOpenBook = onOpenBook
+            )
             AppDestinations.UPLOAD -> UploadBookScreen()
-            AppDestinations.PROFILE -> ProfileScreen()
+            AppDestinations.PROFILE -> ProfileScreen(onLogout = onLogout)
         }
     }
 }
@@ -106,6 +150,9 @@ enum class AppDestinations(
 @Composable
 private fun AvitoBooksAppPreview() {
     AvitoBooksTheme {
-        AvitoBooksApp()
+        AvitoBooksApp(
+            onLogout = {},
+            onOpenBook = { _, _ -> }
+        )
     }
 }

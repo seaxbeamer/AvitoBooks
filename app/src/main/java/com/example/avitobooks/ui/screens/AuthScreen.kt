@@ -31,22 +31,26 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.avitobooks.ui.theme.AvitoBooksTheme
-import kotlinx.coroutines.delay
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
-    val isLoginMode: Boolean = true,       // true – режим "Вход", false – "Регистрация"
+    val isLoginMode: Boolean = true,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -68,7 +72,6 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // FIXME FirebaseAuth
     fun submit(onSuccess: () -> Unit) {
         val state = _uiState.value
         val email = state.email.trim()
@@ -93,23 +96,60 @@ class AuthViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
-                // TODO реальный вызов FirebaseAuth
-                delay(1000)
+                if (state.isLoginMode) {
+                    auth.signInWithEmailAndPassword(email, password).await()
+                } else {
+                    auth.createUserWithEmailAndPassword(email, password).await()
+                }
                 onSuccess()
             } catch (e: Exception) {
+                val message = when (e) {
+                    is FirebaseAuthException -> mapFirebaseError(e, state.isLoginMode)
+                    else -> if (state.isLoginMode) {
+                        "Не удалось выполнить вход. Попробуйте ещё раз."
+                    } else {
+                        "Не удалось выполнить регистрацию. Попробуйте ещё раз."
+                    }
+                }
+
                 _uiState.update {
                     it.copy(
-                        isLoading = false,
-                        errorMessage = if (it.isLoginMode) {
-                            "Не удалось выполнить вход"
-                        } else {
-                            "Не удалось выполнить регистрацию"
-                        }
+                        errorMessage = message
                     )
                 }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
+        }
+    }
+
+    private fun mapFirebaseError(
+        e: FirebaseAuthException,
+        isLoginMode: Boolean
+    ): String {
+        return when (e.errorCode) {
+            "ERROR_INVALID_EMAIL" ->
+                "Некорректный email"
+
+            "ERROR_USER_NOT_FOUND" ->
+                "Пользователь с таким email не найден"
+
+            "ERROR_WRONG_PASSWORD" ->
+                "Неверный пароль"
+
+            "ERROR_EMAIL_ALREADY_IN_USE" ->
+                if (isLoginMode) {
+                    "Этот email уже используется"
+                } else {
+                    "Аккаунт с таким email уже существует"
+                }
+
+            else ->
+                if (isLoginMode) {
+                    "Не удалось выполнить вход: ${e.localizedMessage ?: "неизвестная ошибка"}"
+                } else {
+                    "Не удалось выполнить регистрацию: ${e.localizedMessage ?: "неизвестная ошибка"}"
+                }
         }
     }
 }
